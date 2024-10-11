@@ -2,9 +2,12 @@ import requests
 import os
 import urllib.parse
 
-from flask import Flask, redirect, request, jsonify, session
+from werkzeug.utils import secure_filename
+
+from flask import Flask, render_template, redirect, request, jsonify, session
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+
 from utils import *
 
 load_dotenv()
@@ -19,10 +22,23 @@ redirect_uri = os.getenv("REDIRECT_URI")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("APP_SECRET_KEY")
+app.config['UPLOAD_FOLDER'] = 'static/files'
 
-@app.route('/')
+class UploadFileForm(FlaskForm):
+    file = FileField("File", validators=[InputRequired()])
+    submit = SubmitField("Upload File")
+
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    return "Welcome! <a href='/login'>Login with Spotify</a>"
+    form = UploadFileForm()
+    if form.validate_on_submit():
+        # First grab the file
+        file = form.file.data
+
+        # Then save the file
+        file.save(os.path.join(os.path.abspath(os.path.dirname(__file__)), app.config['UPLOAD_FOLDER'], secure_filename(file.filename)))
+        return "File has been uploaded."
+    return render_template('index.html', form=form)
 
 @app.route('/login')
 def login():
@@ -42,7 +58,7 @@ def login():
 
 @app.route('/callback')
 def callback():
-    # error handling when request is made
+    # Error handling when request is made
     if 'error' in request.args:
         return jsonify({"error": request.args['error']})
 
@@ -80,13 +96,13 @@ def get_artists():
 
     artists_json = response.json()
     
-    # gathers name and genre data from json
+    # Gathers name and genre data from json
     session["artist_names"] = get_names(artists_json)
     session["artist_genres"] = get_genres(artists_json)
 
     return jsonify(artists_json)
 
-# refresh token
+# Refresh token
 @app.route('/refresh-token')
 def refresh_token():
     if 'refresh_token' not in session:
