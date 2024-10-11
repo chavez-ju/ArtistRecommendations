@@ -5,6 +5,7 @@ import urllib.parse
 from flask import Flask, redirect, request, jsonify, session
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+from utils import *
 
 load_dotenv()
 
@@ -77,9 +78,13 @@ def get_artists():
 
     response = requests.get(api_base_url + 'me/top/artists', headers=headers)
 
-    artists = response.json()
+    artists_json = response.json()
+    
+    # gathers name and genre data from json
+    session["artist_names"] = get_names(artists_json)
+    session["artist_genres"] = get_genres(artists_json)
 
-    return jsonify(artists)
+    return jsonify(artists_json)
 
 # refresh token
 @app.route('/refresh-token')
