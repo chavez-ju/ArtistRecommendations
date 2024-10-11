@@ -2,3 +2,6 @@ env/
 .env
 requirements.txt
 utils.py
+__pycache__/
+static/
+templates/
