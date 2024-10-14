@@ -38,7 +38,7 @@ def index():
         # Then save the file
         file.save(os.path.join(os.path.abspath(os.path.dirname(__file__)), app.config['UPLOAD_FOLDER'], secure_filename(file.filename)))
 
-        return "File has be uploaded!" # direct users to /login after file has been uploaded
+        return redirect('/login') # direct users to /login after file has been uploaded
     return render_template('index.html', form=form)
 
 @app.route('/login')
@@ -79,10 +79,10 @@ def callback():
         session['refresh_token'] = token['refresh_token']
         session['expires_at'] = datetime.now().timestamp() + token['expires_in']
 
-    return redirect('/top-artists')
+    return redirect('/get-recommendations')
 
-@app.route('/top-artists')
-def get_artists():
+@app.route('/get-recommendations')
+def get_recommendations():
     if 'access_token' not in session:
         return redirect('/login')
     
@@ -93,15 +93,38 @@ def get_artists():
         'Authorization': f"Bearer {session['access_token']}"
     }
 
+    # Get user's top artists
     response = requests.get(api_base_url + 'me/top/artists', headers=headers)
 
-    artists_json = response.json()
+    #artists_json = response.json()
     
-    # Gathers name and genre data from json
-    session["artist_names"] = get_names(artists_json)
-    session["artist_genres"] = get_genres(artists_json)
+    # Gathers user favorite name and genre data from json
+    artist_names = get_names(response.json())
+    genres = get_genres(response.json())
 
-    return jsonify(artists_json)
+    lineup_names = read_file()
+
+    # First, read names
+    set_i = set(lineup_names).intersection(set(artist_names))
+
+    # Get genre info on lineup artists, by searching with their name
+    for name in lineup_names:
+        response = requests.get(api_base_url + 'search?q=' + name + '&type=artist&limit=1', headers=headers)
+        lineup_artist_genres = item_search_get_genres(response.json())
+        if len(lineup_artist_genres) != 0:
+            thresh = len(lineup_artist_genres) // 2 + (len(lineup_artist_genres) % 2 > 0)
+            count = 0
+            for i in lineup_artist_genres:
+                if i in genres:
+                    count += 1
+            if count >= thresh:
+                set_i.add(name)
+        
+    print(list(set_i))
+
+
+    return jsonify(response.json())
+
 
 # Refresh token
 @app.route('/refresh-token')
@@ -123,7 +146,7 @@ def refresh_token():
         session['access_token'] = new_token['access_token']
         session['expires_at'] = datetime.now().timestamp() + new_token['expires_at']
 
-        return redirect('/top-artists')
+        return redirect('/get-recommendations')
 
 
 if __name__ == '__main__':
