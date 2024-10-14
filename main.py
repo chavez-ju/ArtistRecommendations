@@ -95,16 +95,14 @@ def get_recommendations():
 
     # Get user's top artists
     response = requests.get(api_base_url + 'me/top/artists', headers=headers)
-
-    #artists_json = response.json()
     
-    # Gathers user favorite name and genre data from json
+    # Gathers user's favorite artists name and genre data from json
     artist_names = get_names(response.json())
     genres = get_genres(response.json())
 
     lineup_names = read_file()
 
-    # First, read names
+    # First, read names of favorite arists
     set_i = set(lineup_names).intersection(set(artist_names))
 
     # Get genre info on lineup artists, by searching with their name
@@ -112,6 +110,7 @@ def get_recommendations():
         response = requests.get(api_base_url + 'search?q=' + name + '&type=artist&limit=1', headers=headers)
         lineup_artist_genres = item_search_get_genres(response.json())
         if len(lineup_artist_genres) != 0:
+            # Threshold set to 50% or more
             thresh = len(lineup_artist_genres) // 2 + (len(lineup_artist_genres) % 2 > 0)
             count = 0
             for i in lineup_artist_genres:
@@ -122,9 +121,7 @@ def get_recommendations():
         
     print(list(set_i))
 
-
-    return jsonify(response.json())
-
+    return list(set_i)
 
 # Refresh token
 @app.route('/refresh-token')
