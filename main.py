@@ -1,12 +1,12 @@
-import requests
-import os
-import urllib.parse
-
-from werkzeug.utils import secure_filename
-
 from flask import Flask, render_template, redirect, request, jsonify, session
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+
+from werkzeug.utils import secure_filename
+
+import requests
+import os
+import urllib.parse
 
 from utils import *
 
@@ -37,7 +37,8 @@ def index():
 
         # Then save the file
         file.save(os.path.join(os.path.abspath(os.path.dirname(__file__)), app.config['UPLOAD_FOLDER'], secure_filename(file.filename)))
-        return "File has been uploaded."
+
+        return "File has be uploaded!" # direct users to /login after file has been uploaded
     return render_template('index.html', form=form)
 
 @app.route('/login')
